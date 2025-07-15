@@ -1,0 +1,2 @@
+Please make sure to clone the Git Repo of Decoding Trust to run the privacy test. 
+git clone https://github.com/AI-secure/DecodingTrust.git
