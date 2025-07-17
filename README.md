@@ -37,7 +37,7 @@ Dataset used: AdvBench
 Add your model providers' API keys (e.g., OpenAI, Anthropic, Google) in the .env file. 
 
 🧠 Add Custom LLMs:
-Add or configure different LLMs in the config.yaml file. You can plug in models from OpenAI, Anthropic, HuggingFace, Google, etc.
+Add or configure different LLMs in the config.py file. You can plug in models from OpenAI, Anthropic, HuggingFace, Google, etc.
 
 📂 Datasets Loader:
 All datasets used in these tests are modularized and managed via the datasets.py file. You can easily add new datasets or swap existing ones.
