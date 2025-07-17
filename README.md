@@ -46,8 +46,11 @@ All datasets used in these tests are modularized and managed via the datasets.py
 Clone the repo:
 
 git clone https://github.com/Arnav-SiriusAI/llm-safety-tests.git
+
 cd llm-safety-tests
+
 Install dependencies:
+
 pip install -r requirements.txt
 
 
