@@ -5,8 +5,10 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 # Add parent directory to path to allow imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+
+from excel_updater import log_results
 from config import LLMConfig
 from dataset import DatasetFactory
 
@@ -54,19 +56,19 @@ def run_single_pillar_test(test_client, judge_client, harmbench_loader, pillar: 
         })
 
     issue_rate = (issue_count / len(dataset_sample)) * 100 if dataset_sample else 0
-    print(f"🏁 {pillar.upper()} Pillar Result: {issue_rate:.1f}% Issue Rate")
+    print(f"🏁 {pillar.toUpperCase()} Pillar Result: {issue_rate:.1f}% Issue Rate")
     return results, issue_rate
 
-def run_harmbench_test(llm_name: str, model_name: str, pillars_to_test: list, num_samples_per_pillar: int):
+def run_harmbench_test(llm_provider: str, model_name: str, pillars_to_test: list, num_samples_per_pillar: int):
     """Main function to orchestrate the full HarmBench test across multiple pillars."""
-    print(f"\n🚀 Starting HarmBench test for LLM: '{llm_name}' with Model: '{model_name}'")
+    print(f"\n🚀 Starting HarmBench test for LLM: '{llm_provider}' with Model: '{model_name}'")
 
     # 1. Initialize Clients
     try:
         llm_config = LLMConfig()
-        test_client = llm_config.get_client(llm_name, model_name)
+        test_client = llm_config.get_client(llm_provider, model_name)
         judge_client = llm_config.get_client("openai", "gpt-4o")
-        print(f"✅ Test LLM: {llm_name.capitalize()} '{model_name}' | Judge LLM: OpenAI 'gpt-4o'")
+        print(f"✅ Test LLM: {llm_provider.capitalize()} '{model_name}' | Judge LLM: OpenAI 'gpt-4o'")
     except Exception as e:
         print(f"❌ Failed to initialize LLMs: {e}")
         return
@@ -87,21 +89,34 @@ def run_harmbench_test(llm_name: str, model_name: str, pillars_to_test: list, nu
             all_results_data.extend(results_data)
             performance_summary[pillar] = f"{rate:.1f}%"
 
-    # 4. Display Final Summary
+    # --- MODIFICATION 2: Log the pillar scores to Excel ---
+    if performance_summary:
+        # Create descriptive keys for the Excel columns
+        results_to_log = {
+            f"HarmBench {pillar.capitalize()} Issue Rate": rate
+            for pillar, rate in performance_summary.items()
+        }
+        log_results(
+            llm_name=model_name,
+            results_dict=results_to_log
+        )
+
+    # 4. Display Final Summary 
     print(f"\n\n{'='*30}\n📊 Final Performance Summary\n{'='*30}")
     summary_df = pd.DataFrame.from_dict(
         performance_summary, orient='index', columns=['Issue Rate']
     )
     print(summary_df.to_markdown())
 
+
 if __name__ == "__main__":
     # --- CONFIGURE YOUR TEST RUN HERE ---
     TARGET_LLM_PROVIDER = "anthropic"
     TARGET_LLM_MODEL = "claude-3-haiku-20240307"
-    
+
     # Define which pillars of HarmBench to run
     PILLARS_TO_TEST = ['standard', 'copyright', 'contextual']
-    
+
     # Define how many prompts to sample from each pillar
     NUM_SAMPLES_PER_PILLAR = 15
 
