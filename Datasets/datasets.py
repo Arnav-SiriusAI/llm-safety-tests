@@ -22,39 +22,66 @@ def _hf_login():
 _hf_login()
 
 class BBQDataset:
-    # ... (this class remains unchanged from before) ...
     def __init__(self):
+        """Initializes the dataset class with the predefined BBQ categories."""
         self.categories = [
             "Age", "Disability_status", "Gender_identity", "Nationality",
             "Physical_appearance", "Race_ethnicity", "Religion", "SES", "Sexual_orientation"
         ]
 
-    def get_data(self):
-        print("\nPlease choose a BBQ subset to load:")
-        for i, name in enumerate(self.categories): print(f"  {i}: {name}")
-        chosen_category = None
-        while chosen_category is None:
-            try:
-                choice_str = input(f"Enter a number (0-{len(self.categories)-1}): ")
-                chosen_index = int(choice_str)
-                if 0 <= chosen_index < len(self.categories):
-                    chosen_category = self.categories[chosen_index]
-                else: print("🛑 Invalid number.")
-            except (ValueError, KeyboardInterrupt, EOFError):
-                print("\n🛑 Aborting dataset selection.")
-                return None
-        
-        if chosen_category:
-            filename = f"data/{chosen_category}.jsonl"
-            print(f"\n✅ You selected '{chosen_category}'. Downloading...")
-            try:
-                path = hf_hub_download("heegyu/bbq", filename=filename, repo_type="dataset")
-                return pd.read_json(path, lines=True)
-            except Exception as e:
-                print(f"🛑 Error during download: {e}")
-                return None
-        return None
+    def get_data(self, sample_size=20, random_state=42):
+        """
+        Loads a sample of prompts from each BBQ category and combines them.
 
+        Args:
+            sample_size (int): The number of random prompts to sample from each category.
+            random_state (int): A seed for the random sampler for reproducibility.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the combined samples from all categories,
+                              or None if loading fails.
+        """
+        print(f"\n⚙️ Loading a sample of {sample_size} prompts from all {len(self.categories)} categories...")
+
+        all_samples = []
+
+        # Loop through each category
+        for category in self.categories:
+            filename = f"data/{category}.jsonl"
+            print(f"  - Downloading and sampling '{category}'...")
+
+            try:
+                # Download the specific category file from Hugging Face Hub
+                path = hf_hub_download(
+                    repo_id="heegyu/bbq",
+                    filename=filename,
+                    repo_type="dataset"
+                )
+
+                # Read the file into a pandas DataFrame
+                category_df = pd.read_json(path, lines=True)
+
+                # Take a random sample of N rows
+                # Use min() to prevent errors if a category has fewer rows than sample_size
+                n_samples = min(sample_size, len(category_df))
+                sample = category_df.sample(n=n_samples, random_state=random_state)
+                all_samples.append(sample)
+
+            except Exception as e:
+                print(f"  🛑 Failed to load category '{category}'. Error: {e}")
+                continue # Skip to the next category
+
+        # If no data was loaded at all, return None
+        if not all_samples:
+            print("\n🛑 No data could be loaded.")
+            return None
+
+        # Concatenate the list of sample DataFrames into one
+        final_df = pd.concat(all_samples, ignore_index=True)
+
+        print(f"\n✅ Successfully created a dataset with {len(final_df)} total prompts.")
+        return final_df
+        
 class ToxiGenDataset:
     """
     Handles loading the ToxiGen dataset from Hugging Face.
