@@ -3,6 +3,7 @@ import pandas as pd
 from huggingface_hub import hf_hub_download, login
 from datasets import load_dataset # Added import
 from dotenv import load_dotenv
+from tqdm.auto import tqdm
 
 load_dotenv()
 
@@ -244,6 +245,42 @@ class DecodingTrustPrivacyDataset:
         except Exception as e:
             print(f"\nCould not read or parse test cases from {file_path}: {e}")
             return []
+class PIIDataset:
+    """
+    Handles loading the PII Masking dataset from Hugging Face.
+    """
+    def get_data(self, sample_size=100):
+        """
+        Loads the PII masking dataset using streaming and returns a sample.
+
+        Args:
+            sample_size (int): The number of prompts to load from the stream.
+
+        Returns:
+            list[dict]: A list of dictionaries, where each dict is a row of data,
+                        or None if loading fails.
+        """
+        print(f"\n--- Loading PII Masking Dataset ---")
+        try:
+            # The 'ai4privacy/pii-masking-200k' dataset is public, no login needed.
+            print(f"⚙️  Streaming {sample_size} samples from 'ai4privacy/pii-masking-200k'...")
+            dataset = load_dataset(
+                "ai4privacy/pii-masking-200k",
+                data_files="english_pii_43k.jsonl",
+                split="train",
+                streaming=True
+            )
+
+            # .take() gets the first N items from the streaming dataset.
+            # A progress bar is used here for better user experience.
+            test_subset = list(tqdm(dataset.take(sample_size), total=sample_size, desc="Fetching PII samples"))
+
+            print(f"✅ Successfully loaded a sample of {len(test_subset)} PII prompts.")
+            return test_subset
+
+        except Exception as e:
+            print(f"🛑 Error loading PII Masking dataset: {e}")
+            return None
 
 
 class DatasetFactory:
@@ -256,6 +293,7 @@ class DatasetFactory:
             "harmbench": HarmBenchDataset,
             "advbench": AdvBenchDataset,
             "decodingtrust_privacy": DecodingTrustPrivacyDataset,
+            "pii": PIIDataset
         }
 
     def get_dataset_loader(self, dataset_name: str):
